@@ -14,6 +14,7 @@ use std::time::Duration;
 pub struct BasicAppState {
     window: nwg::Window,
     name_edit: nwg::TextInput,
+    result: nwg::TextInput,
     hello_button: nwg::Button,
     spawn_button: nwg::Button,
     ports_combo_list: nwg::ComboBox<&'static str>,
@@ -62,7 +63,7 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
         // Controls
         nwg::Window::builder()
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
-            .size((300, 115))
+            .size((300, 300))
             .position((300, 300))
             .title("Basic example")
             .build(&mut data.window)?;
@@ -75,25 +76,37 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
             .focus(false)
             .readonly(true)
             .build(&mut data.name_edit)?;
+        nwg::TextInput::builder()
+            .size((280, 25))
+            .position((10, 40))
+            .text("Result")
+            .parent(&data.window)
+            .focus(false)
+            .readonly(true)
+            .build(&mut data.result)?;
 
         nwg::Button::builder()
-            .position((10, 40))
+            .position((10, 70))
             .text("Spawn")
             .parent(&data.window)
             .build(&mut data.spawn_button)?;
 
         nwg::Button::builder()
-            .position((10, 40))
+            .position((10, 100))
             .text("Say my name")
             .parent(&data.window)
             .build(&mut data.hello_button)?;
 
         nwg::ComboBox::builder()
-            .position((10, 70))
+            .position((10, 130))
             .parent(&data.window)
             .collection(vec!["First", "Second"])
             .selected_index(Some(0))
             .build(&mut data.ports_combo_list)?;
+
+        nwg::Notice::builder()
+            .parent(&data.window)
+            .build(&mut data.notice)?;
 
         // Wrap-up
         let ui = BasicAppUi {
@@ -106,6 +119,13 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
         let handle_events = move |evt, _evt_data, handle| {
             if let Some(ui) = evt_ui.upgrade() {
                 match evt {
+                    E::OnComboxBoxSelection => {
+                        if &handle == &ui.ports_combo_list {
+                            if let Some(string) = ui.ports_combo_list.selection_string() {
+                                ui.result.set_text(string.as_str());
+                            }
+                        }
+                    }
                     E::OnButtonClick => {
                         if &handle == &ui.hello_button {
                             //BasicAppState::say_hello();
@@ -140,12 +160,10 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
                                 .set_text(format!("Count is {}", *recv).as_str());
                         }
                     }
-
                     _ => {}
                 }
             }
         };
-
         *ui.default_handler.borrow_mut() = Some(nwg::full_bind_event_handler(
             &ui.window.handle,
             handle_events,
@@ -165,6 +183,8 @@ fn main() {
         window: nwg::Window::default(),
         name_edit: nwg::TextInput::default(),
         hello_button: nwg::Button::default(),
+        result: nwg::TextInput::default(),
+
         spawn_button: nwg::Button::default(),
         notice: nwg::Notice::default(),
         ports_combo_list: nwg::ComboBox::default(),
