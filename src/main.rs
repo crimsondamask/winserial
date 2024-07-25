@@ -8,11 +8,17 @@ use nwg::NativeUi;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
+use std::thread;
+use std::time::Duration;
 
 pub struct BasicAppState {
     window: nwg::Window,
     name_edit: nwg::TextInput,
     hello_button: nwg::Button,
+    spawn_button: nwg::Button,
+    ports_combo_list: nwg::ComboBox<&'static str>,
+    notice: nwg::Notice,
+    channel: RefCell<(Sender<u32>, Receiver<u32>)>,
 }
 
 impl BasicAppState {
@@ -66,14 +72,28 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
             .position((10, 10))
             .text("Heisenberg")
             .parent(&data.window)
-            .focus(true)
+            .focus(false)
+            .readonly(true)
             .build(&mut data.name_edit)?;
+
+        nwg::Button::builder()
+            .position((10, 40))
+            .text("Spawn")
+            .parent(&data.window)
+            .build(&mut data.spawn_button)?;
 
         nwg::Button::builder()
             .position((10, 40))
             .text("Say my name")
             .parent(&data.window)
             .build(&mut data.hello_button)?;
+
+        nwg::ComboBox::builder()
+            .position((10, 70))
+            .parent(&data.window)
+            .collection(vec!["First", "Second"])
+            .selected_index(Some(0))
+            .build(&mut data.ports_combo_list)?;
 
         // Wrap-up
         let ui = BasicAppUi {
@@ -88,7 +108,23 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
                 match evt {
                     E::OnButtonClick => {
                         if &handle == &ui.hello_button {
-                            BasicAppState::say_hello();
+                            //BasicAppState::say_hello();
+                            ui.name_edit.set_text("Clicked!");
+                        }
+
+                        if &handle == &ui.spawn_button {
+                            let send = ui.channel.borrow_mut().0.clone();
+                            let sender = ui.notice.sender();
+                            thread::spawn(move || {
+                                let mut i = 0;
+                                loop {
+                                    i += 1;
+                                    thread::sleep(Duration::from_secs(1));
+
+                                    send.send(i).unwrap();
+                                    sender.notice();
+                                }
+                            });
                         }
                     }
                     E::OnWindowClose => {
@@ -96,6 +132,15 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
                             BasicAppState::say_goodbye();
                         }
                     }
+                    E::OnNotice => {
+                        if let Ok(recv) =
+                            &ui.channel.borrow().1.recv_timeout(Duration::from_secs(2))
+                        {
+                            ui.name_edit
+                                .set_text(format!("Count is {}", *recv).as_str());
+                        }
+                    }
+
                     _ => {}
                 }
             }
@@ -113,10 +158,17 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
 fn main() {
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
+
+    let (send, recv): (Sender<u32>, Receiver<u32>) = crossbeam_channel::unbounded();
+    let channel = RefCell::new((send, recv));
     let app_state = BasicAppState {
         window: nwg::Window::default(),
         name_edit: nwg::TextInput::default(),
         hello_button: nwg::Button::default(),
+        spawn_button: nwg::Button::default(),
+        notice: nwg::Notice::default(),
+        ports_combo_list: nwg::ComboBox::default(),
+        channel,
     };
 
     let _ui = BasicAppState::build_ui(app_state).expect("Error.");
