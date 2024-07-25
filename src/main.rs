@@ -4,6 +4,7 @@ extern crate native_windows_gui as nwg;
 use crossbeam_channel::{Receiver, Sender};
 use nwd::NwgUi;
 use nwg::NativeUi;
+use serialport::available_ports;
 
 use std::cell::RefCell;
 use std::ops::Deref;
@@ -17,7 +18,7 @@ pub struct BasicAppState {
     result: nwg::TextInput,
     hello_button: nwg::Button,
     spawn_button: nwg::Button,
-    ports_combo_list: nwg::ComboBox<&'static str>,
+    ports_combo_list: nwg::ComboBox<String>,
     notice: nwg::Notice,
     channel: RefCell<(Sender<u32>, Receiver<u32>)>,
 }
@@ -62,7 +63,9 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
 
         // Controls
         nwg::Window::builder()
-            .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
+            .flags(
+                nwg::WindowFlags::MAIN_WINDOW | nwg::WindowFlags::VISIBLE, //| nwg::WindowFlags::SYS_MENU,
+            )
             .size((300, 300))
             .position((300, 300))
             .title("Basic example")
@@ -97,10 +100,13 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
             .parent(&data.window)
             .build(&mut data.hello_button)?;
 
+        let mut col = Vec::new();
+        col.push("First".to_string());
+        col.push("Second".to_string());
         nwg::ComboBox::builder()
             .position((10, 130))
             .parent(&data.window)
-            .collection(vec!["First", "Second"])
+            .collection(col)
             .selected_index(Some(0))
             .build(&mut data.ports_combo_list)?;
 
@@ -123,6 +129,18 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
                         if &handle == &ui.ports_combo_list {
                             if let Some(string) = ui.ports_combo_list.selection_string() {
                                 ui.result.set_text(string.as_str());
+                            }
+                        }
+                    }
+                    E::OnComboBoxDropdown => {
+                        if &handle == &ui.ports_combo_list {
+                            match available_ports() {
+                                Ok(ports) => {
+                                    let collection =
+                                        ports.iter().map(|port| port.port_name.clone()).collect();
+                                    ui.ports_combo_list.set_collection(collection);
+                                }
+                                _ => {}
                             }
                         }
                     }
