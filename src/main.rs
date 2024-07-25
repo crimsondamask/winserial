@@ -70,7 +70,6 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
             .build(&mut data.name_edit)?;
 
         nwg::Button::builder()
-            .size((280, 60))
             .position((10, 40))
             .text("Say my name")
             .parent(&data.window)
