@@ -3,7 +3,7 @@ extern crate native_windows_gui as nwg;
 
 use crossbeam_channel::{Receiver, Sender};
 use nwd::NwgUi;
-use nwg::{NativeUi, RichTextBoxFlags, TextBoxFlags};
+use nwg::{Font, NativeUi, RichTextBoxFlags, TextBoxFlags};
 use serialport::available_ports;
 
 use std::cell::RefCell;
@@ -18,6 +18,7 @@ pub struct BasicAppState {
     result: nwg::TextInput,
     hello_button: nwg::Button,
     spawn_button: nwg::Button,
+    text_box_font: nwg::Font,
     ports_combo_list: nwg::ComboBox<String>,
     notice: nwg::Notice,
     channel: RefCell<(Sender<u32>, Receiver<u32>)>,
@@ -93,8 +94,14 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
             .size((280, 100))
             .parent(&data.window)
             .readonly(true)
+            .font(Some(&data.text_box_font))
             .position((10, 160))
             .build(&mut data.logs)?;
+
+        nwg::Font::builder()
+            .family("Courier New")
+            .size(12)
+            .build(&mut data.text_box_font)?;
 
         nwg::Button::builder()
             .position((10, 70))
@@ -215,6 +222,7 @@ fn main() {
         result: nwg::TextInput::default(),
         spawn_button: nwg::Button::default(),
         notice: nwg::Notice::default(),
+        text_box_font: nwg::Font::default(),
         ports_combo_list: nwg::ComboBox::default(),
         channel,
         logs: nwg::RichTextBox::default(),
