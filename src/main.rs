@@ -214,7 +214,7 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
 fn main() {
     nwg::init().expect("Failed to init Native Windows GUI");
 
-    nwg::Font::set_global_family("Arial").expect("Failed to set default font");
+    nwg::Font::set_global_family("Calibri").expect("Failed to set default font");
 
     let (send, recv): (Sender<u32>, Receiver<u32>) = crossbeam_channel::unbounded();
     let channel = RefCell::new((send, recv));
