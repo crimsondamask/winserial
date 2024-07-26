@@ -3,7 +3,7 @@ extern crate native_windows_gui as nwg;
 
 use crossbeam_channel::{Receiver, Sender};
 use nwd::NwgUi;
-use nwg::NativeUi;
+use nwg::{NativeUi, RichTextBoxFlags, TextBoxFlags};
 use serialport::available_ports;
 
 use std::cell::RefCell;
@@ -21,6 +21,7 @@ pub struct BasicAppState {
     ports_combo_list: nwg::ComboBox<String>,
     notice: nwg::Notice,
     channel: RefCell<(Sender<u32>, Receiver<u32>)>,
+    logs: nwg::RichTextBox,
 }
 
 impl BasicAppState {
@@ -87,6 +88,13 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
             .focus(false)
             .readonly(true)
             .build(&mut data.result)?;
+        nwg::RichTextBox::builder()
+            //.flags(RichTextBoxFlags::AUTOVSCROLL)
+            .size((280, 100))
+            .parent(&data.window)
+            .readonly(true)
+            .position((10, 160))
+            .build(&mut data.logs)?;
 
         nwg::Button::builder()
             .position((10, 70))
@@ -176,6 +184,9 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
                         {
                             ui.name_edit
                                 .set_text(format!("Count is {}", *recv).as_str());
+                            let mut logs = ui.logs.text();
+                            logs.push_str(format!("Count is {}\r\n", recv).as_str());
+                            ui.logs.set_text(logs.as_str());
                         }
                     }
                     _ => {}
@@ -202,11 +213,11 @@ fn main() {
         name_edit: nwg::TextInput::default(),
         hello_button: nwg::Button::default(),
         result: nwg::TextInput::default(),
-
         spawn_button: nwg::Button::default(),
         notice: nwg::Notice::default(),
         ports_combo_list: nwg::ComboBox::default(),
         channel,
+        logs: nwg::RichTextBox::default(),
     };
 
     let _ui = BasicAppState::build_ui(app_state).expect("Error.");
