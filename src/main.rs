@@ -23,6 +23,7 @@ pub struct BasicAppState {
     notice: nwg::Notice,
     channel: RefCell<(Sender<u32>, Receiver<u32>)>,
     logs: nwg::RichTextBox,
+    file_menu: nwg::Menu,
 }
 
 impl BasicAppState {
@@ -129,6 +130,12 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
             .parent(&data.window)
             .build(&mut data.notice)?;
 
+        nwg::Menu::builder()
+            .parent(&data.window)
+            .popup(false)
+            .text("File")
+            .build(&mut data.file_menu)?;
+
         // Wrap-up
         let ui = BasicAppUi {
             inner: Rc::new(data),
@@ -226,6 +233,7 @@ fn main() {
         ports_combo_list: nwg::ComboBox::default(),
         channel,
         logs: nwg::RichTextBox::default(),
+        file_menu: nwg::Menu::default(),
     };
 
     let _ui = BasicAppState::build_ui(app_state).expect("Error.");
