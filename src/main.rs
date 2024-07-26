@@ -2,8 +2,7 @@ extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
 use crossbeam_channel::{Receiver, Sender};
-use nwd::NwgUi;
-use nwg::{Font, NativeUi, RichTextBoxFlags, TextBoxFlags};
+use nwg::{HTextAlign, NativeUi, VTextAlign};
 use serialport::available_ports;
 
 use std::cell::RefCell;
@@ -19,12 +18,11 @@ pub struct FileMenu {
 
 pub struct BasicAppState {
     window: nwg::Window,
-    name_edit: nwg::TextInput,
     result: nwg::TextInput,
-    hello_button: nwg::Button,
     spawn_button: nwg::Button,
     text_box_font: nwg::Font,
     ports_combo_list: nwg::ComboBox<String>,
+    ports_combo_label: nwg::Label,
     notice: nwg::Notice,
     channel: RefCell<(Sender<u32>, Receiver<u32>)>,
     logs: nwg::RichTextBox,
@@ -32,10 +30,6 @@ pub struct BasicAppState {
 }
 
 impl BasicAppState {
-    fn say_hello() {
-        nwg::simple_message("Greetings", "Hello there!");
-    }
-
     fn say_goodbye() {
         nwg::simple_message("Goodbyes", "Goodbye!");
         nwg::stop_thread_dispatch();
@@ -74,19 +68,28 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
             .flags(
                 nwg::WindowFlags::MAIN_WINDOW | nwg::WindowFlags::VISIBLE, //| nwg::WindowFlags::SYS_MENU,
             )
-            .size((300, 300))
+            .size((680, 460))
             .position((300, 300))
-            .title("Basic example")
+            .title("Winserial")
             .build(&mut data.window)?;
 
-        nwg::TextInput::builder()
-            .size((280, 25))
+        nwg::Label::builder()
             .position((10, 10))
-            .text("Heisenberg")
+            .text("Port:")
+            .v_align(VTextAlign::Center)
             .parent(&data.window)
-            .focus(false)
-            .readonly(true)
-            .build(&mut data.name_edit)?;
+            .build(&mut data.ports_combo_label)?;
+
+        let mut col = Vec::new();
+        col.push("First".to_string());
+        col.push("Second".to_string());
+
+        nwg::ComboBox::builder()
+            .position((150, 10))
+            .parent(&data.window)
+            .collection(col)
+            .build(&mut data.ports_combo_list)?;
+
         nwg::TextInput::builder()
             .size((280, 25))
             .position((10, 40))
@@ -114,22 +117,6 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
             .text("Spawn")
             .parent(&data.window)
             .build(&mut data.spawn_button)?;
-
-        nwg::Button::builder()
-            .position((10, 100))
-            .text("Say my name")
-            .parent(&data.window)
-            .build(&mut data.hello_button)?;
-
-        let mut col = Vec::new();
-        col.push("First".to_string());
-        col.push("Second".to_string());
-        nwg::ComboBox::builder()
-            .position((10, 130))
-            .parent(&data.window)
-            .collection(col)
-            .selected_index(Some(0))
-            .build(&mut data.ports_combo_list)?;
 
         nwg::Notice::builder()
             .parent(&data.window)
@@ -182,11 +169,6 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
                         }
                     }
                     E::OnButtonClick => {
-                        if &handle == &ui.hello_button {
-                            //BasicAppState::say_hello();
-                            ui.name_edit.set_text("Clicked!");
-                        }
-
                         if &handle == &ui.spawn_button {
                             let send = ui.channel.borrow_mut().0.clone();
                             let sender = ui.notice.sender();
@@ -211,8 +193,6 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
                         if let Ok(recv) =
                             &ui.channel.borrow().1.recv_timeout(Duration::from_secs(2))
                         {
-                            ui.name_edit
-                                .set_text(format!("Count is {}", *recv).as_str());
                             let mut logs = ui.logs.text();
                             logs.push_str(format!("Count is {}\r\n", recv).as_str());
                             ui.logs.set_text(logs.as_str());
@@ -243,12 +223,11 @@ fn main() {
     };
     let app_state = BasicAppState {
         window: nwg::Window::default(),
-        name_edit: nwg::TextInput::default(),
-        hello_button: nwg::Button::default(),
         result: nwg::TextInput::default(),
         spawn_button: nwg::Button::default(),
         notice: nwg::Notice::default(),
         text_box_font: nwg::Font::default(),
+        ports_combo_label: nwg::Label::default(),
         ports_combo_list: nwg::ComboBox::default(),
         channel,
         logs: nwg::RichTextBox::default(),
