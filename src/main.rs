@@ -12,6 +12,11 @@ use std::rc::Rc;
 use std::thread;
 use std::time::Duration;
 
+pub struct FileMenu {
+    file_menu: nwg::Menu,
+    quit_butto: nwg::MenuItem,
+}
+
 pub struct BasicAppState {
     window: nwg::Window,
     name_edit: nwg::TextInput,
@@ -23,7 +28,7 @@ pub struct BasicAppState {
     notice: nwg::Notice,
     channel: RefCell<(Sender<u32>, Receiver<u32>)>,
     logs: nwg::RichTextBox,
-    file_menu: nwg::Menu,
+    file_menu: FileMenu,
 }
 
 impl BasicAppState {
@@ -134,7 +139,12 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
             .parent(&data.window)
             .popup(false)
             .text("File")
-            .build(&mut data.file_menu)?;
+            .build(&mut data.file_menu.file_menu)?;
+
+        nwg::MenuItem::builder()
+            .text("Quit")
+            .parent(&data.file_menu.file_menu)
+            .build(&mut data.file_menu.quit_butto)?;
 
         // Wrap-up
         let ui = BasicAppUi {
@@ -147,6 +157,11 @@ impl nwg::NativeUi<BasicAppUi> for BasicAppState {
         let handle_events = move |evt, _evt_data, handle| {
             if let Some(ui) = evt_ui.upgrade() {
                 match evt {
+                    E::OnMenuItemSelected => {
+                        if &handle == &ui.file_menu.quit_butto {
+                            nwg::stop_thread_dispatch();
+                        }
+                    }
                     E::OnComboxBoxSelection => {
                         if &handle == &ui.ports_combo_list {
                             if let Some(string) = ui.ports_combo_list.selection_string() {
@@ -222,6 +237,10 @@ fn main() {
 
     let (send, recv): (Sender<u32>, Receiver<u32>) = crossbeam_channel::unbounded();
     let channel = RefCell::new((send, recv));
+    let file_menu = FileMenu {
+        file_menu: nwg::Menu::default(),
+        quit_butto: nwg::MenuItem::default(),
+    };
     let app_state = BasicAppState {
         window: nwg::Window::default(),
         name_edit: nwg::TextInput::default(),
@@ -233,7 +252,7 @@ fn main() {
         ports_combo_list: nwg::ComboBox::default(),
         channel,
         logs: nwg::RichTextBox::default(),
-        file_menu: nwg::Menu::default(),
+        file_menu,
     };
 
     let _ui = BasicAppState::build_ui(app_state).expect("Error.");
